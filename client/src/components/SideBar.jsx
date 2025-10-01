@@ -1,13 +1,22 @@
 import React, { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import './../styles/sidebar.css'
-const base = import.meta.env.VITE_BASE_URL || '/'
 
 const Sidebar = ({userT}) => {
-    const [user, setUser] = useState(null);
+    const [user, setUser] = useState(null)
+    const navigate = useNavigate()
+    const API_BASE = 'http://localhost:3000/'
 
     useEffect(() => {
-        fetch(base+'api/session', {
+        fetchUser()
+    }, [])
+    
+    useEffect(() => {
+        fetchUser()
+    }, [userT])
+
+    const fetchUser = () => {
+        fetch(`${API_BASE}api/session`, {
             credentials: 'include'
         })
         .then(response => {
@@ -15,36 +24,42 @@ const Sidebar = ({userT}) => {
             else throw new Error("Account not found")
         })
         .then(data => {
-            console.log(data)
+            console.log('✅ User logged in:', data.user)
             setUser(data.user)
         })
-            .catch(error => setUser(null))
-    }, [])
-    useEffect(() => {
-        console.log(userT)
-        fetch(base+'api/session', {
-            credentials: 'include'
+        .catch(error => {
+            console.log('❌ Not authenticated')
+            setUser(null)
         })
-            .then(response => {
-                if(response.status === 200) return response.json()
-                else throw new Error("Account not found")
-            })
-            .then(data => setUser(data.user))
-            .catch(error => setUser(null))
-    }, [userT])
+    }
 
-    const handleLogout = () => {
-        fetch(base+'api/logout', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            credentials: 'include'
-        })
-            .then(() => {
-                setUser(null);
-                window.location.href = '/';
+    const handleLogout = async () => {
+        console.log('🚪 Logout initiated...')
+        
+        try {
+            const response = await fetch(`${API_BASE}api/logout`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'include'
             })
+
+            console.log('Logout response:', response.status)
+
+            if (response.ok) {
+                console.log('✅ Logout successful')
+                setUser(null)
+                navigate('/')
+                
+            } else {
+                console.error('❌ Logout failed:', response.status)
+                alert('Erreur lors de la déconnexion')
+            }
+        } catch (error) {
+            console.error('❌ Logout error:', error)
+            alert('Erreur réseau lors de la déconnexion')
+        }
     }
 
     return (
@@ -52,16 +67,42 @@ const Sidebar = ({userT}) => {
             <ul>
                 {user?.role ? (
                     <>
-                        <li>Bonjour {user.email}</li>
-                        <li style={{textAlign: 'right'}}><i>{user.role}</i></li>
-                        <li><Link to="/books">Voir la liste des livres</Link></li>
-                        <li><Link to="/profile">Mon profil</Link></li>
-                        <li><button onClick={handleLogout}>Déconnexion</button></li>
+                        <li style={{ fontWeight: 'bold', borderBottom: '1px solid #ddd', paddingBottom: '10px' }}>
+                            👤 {user.email}
+                        </li>
+                        <li style={{textAlign: 'right', fontSize: '12px', color: '#666', marginBottom: '15px'}}>
+                            <i>{user.role}</i>
+                        </li>
+                        <li><Link to="/books">📚 Liste des livres</Link></li>
+                        <li><Link to="/mes-emprunts">📖 Mes Emprunts</Link></li>
+                        <li><Link to="/dashboard">📊 Tableau de bord</Link></li>
+                        {user.role === 'admin' && (
+                            <li><Link to="/add_book">➕ Ajouter un livre</Link></li>
+                        )}
+                        <li style={{ marginTop: '20px' }}>
+                            <button 
+                                onClick={handleLogout}
+                                style={{
+                                    width: '100%',
+                                    backgroundColor: '#f44336',
+                                    color: 'white',
+                                    border: 'none',
+                                    padding: '10px',
+                                    borderRadius: '4px',
+                                    cursor: 'pointer',
+                                    fontSize: '14px',
+                                    fontWeight: 'bold'
+                                }}
+                            >
+                                🚪 Déconnexion
+                            </button>
+                        </li>
                     </>
                 ) : (
                     <>
-                        <li><Link to="/login">Connexion</Link></li>
-                        <li><Link to="/register">Inscription</Link></li>
+                        <li><Link to="/books">📚 Liste des livres</Link></li>
+                        <li><Link to="/login">🔐 Connexion</Link></li>
+                        <li><Link to="/register">📝 Inscription</Link></li>
                     </>
                 )}
             </ul>

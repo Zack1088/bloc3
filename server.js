@@ -2,13 +2,16 @@ const express = require('express')
 const bodyParser = require('body-parser')
 const booksrouter = require('./router/books')
 const usersRouter = require('./router/users')
+const empruntsRouter = require('./router/emprunts')
 const cors = require('cors')
 const path = require('path')
 const cookieParser = require('cookie-parser')
 const jwt = require('jsonwebtoken')
 const db = require('./services/database')
+const fs = require('fs') // ✅ Ajouter
 
 const JWT_SECRET = "HelloThereImObiWan"
+
 function authenticateToken(req, res, next) {
     const token = req.cookies.token
     if (!token) return res.sendStatus(401)
@@ -19,6 +22,7 @@ function authenticateToken(req, res, next) {
         next()
     })
 }
+
 const corsOptions = {
     origin: 'http://localhost:5173',
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
@@ -32,9 +36,15 @@ router.use(cors(corsOptions));
 router.use(cookieParser());
 router.use('/api/books', booksrouter);
 router.use('/api/users', usersRouter);
+router.use('/api/emprunts', empruntsRouter);
 
 router.post('/api/logout', (req, res) => {
-    req.session.destroy();
+    res.clearCookie('token', {
+        httpOnly: true,
+        secure: false,
+        sameSite: 'lax',
+        path: '/'
+    });
     res.json({ message: 'Déconnexion réussie' });
 });
 
@@ -62,17 +72,24 @@ router.get('/api/statistics', (req, res) => {
     });
 });
 
-router.use('/', express.static(path.join(__dirname, "./webpub")))
-router.use(express.static(path.join(__dirname, "./webpub")))
-router.use('/*', (_, res) => {
-    res.sendFile(
-        path.join(__dirname, "./webpub/index.html")
-    );
-})
-router.get("*", (_, res) => {
-    res.sendFile(
-        path.join(__dirname, "./webpub/index.html")
-    );
-});
+// Servir les fichiers statiques uniquement si le dossier existe
+const webpubPath = path.join(__dirname, "./webpub")
+if (fs.existsSync(webpubPath)) {
+    console.log('📁 Serving static files from webpub/')
+    router.use('/', express.static(webpubPath))
+    router.use(express.static(webpubPath))
+    router.get('/*', (_, res) => {
+        res.sendFile(path.join(webpubPath, 'index.html'));
+    })
+} else {
+    console.log('⚠️  webpub folder not found - Running in development mode (API only)')
+    // En développement, renvoyer un message pour les routes non-API
+    router.get('/*', (req, res) => {
+        res.json({ 
+            message: 'API Server - Frontend should be accessed at http://localhost:5173',
+            timestamp: new Date().toISOString()
+        });
+    })
+}
 
 module.exports = router;

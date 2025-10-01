@@ -11,7 +11,6 @@ SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
 SET time_zone = "+00:00";
 
-
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
 /*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
@@ -20,10 +19,16 @@ SET time_zone = "+00:00";
 --
 -- Base de données : `library`
 --
-CREATE DATABASE IF NOT EXISTS library;
-CREATE USER 'libr'@'%' IDENTIFIED BY 'NIEN97BF21OZEFJOZEO';
-GRANT ALL PRIVILEGES ON library.* TO 'libr'@'%' WITH GRANT OPTION;
+
+-- Supprimer et recréer la base de données
+DROP DATABASE IF EXISTS library;
+CREATE DATABASE library;
 USE library;
+
+-- Accorder les privilèges (l'utilisateur existe déjà)
+GRANT ALL PRIVILEGES ON library.* TO 'libr'@'%';
+FLUSH PRIVILEGES;
+
 -- --------------------------------------------------------
 
 --
@@ -46,8 +51,8 @@ CREATE TABLE `livres` (
 --
 
 INSERT INTO `livres` (`id`, `titre`, `auteur`, `date_publication`, `isbn`, `description`, `statut`, `photo_url`) VALUES
-(1, 'Developpement Web mobile avec HTML, CSS et JavaScript Pour les Nuls', 'William HARREL', '2023-11-09', 'DHIDZH1374R', 'Un livre indispensable ï¿½ tous les concepteurs ou dï¿½veloppeurs de sites Web pour iPhone, iPad, smartphones et tablettes !Ce livre est destinï¿½ aux dï¿½veloppeurs qui veulent crï¿½er un site Internet destinï¿½ aux plate-formes mobiles en adoptant les standard du Web que sont HTML, XHTML, les CSS et JavaScript.', 'emprunté', 'https://cdn.cultura.com/cdn-cgi/image/width=180/media/pim/82_metadata-image-20983225.jpeg'),
-(4, 'PHP et MySql pour les Nuls ', 'Janet VALADE', '2023-11-14', '23R32R2R4', 'Le livre best-seller sur PHP & MySQL !\r\n\r\n\r\nAvec cette 5e ï¿½dition de PHP et MySQL pour les Nuls, vous verrez qu\'il n\'est plus nï¿½cessaire d\'ï¿½tre un as de la programmation pour dï¿½velopper des sites Web dynamiques et interactifs.\r\n', 'disponible', ' https://cdn.cultura.com/cdn-cgi/image/width=830/media/pim/66_metadata-image-20983256.jpeg');
+(1, 'Developpement Web mobile avec HTML, CSS et JavaScript Pour les Nuls', 'William HARREL', '2023-11-09', 'DHIDZH1374R', 'Un livre indispensable à tous les concepteurs ou développeurs de sites Web pour iPhone, iPad, smartphones et tablettes !Ce livre est destiné aux développeurs qui veulent créer un site Internet destiné aux plate-formes mobiles en adoptant les standard du Web que sont HTML, XHTML, les CSS et JavaScript.', 'disponible', 'https://cdn.cultura.com/cdn-cgi/image/width=180/media/pim/82_metadata-image-20983225.jpeg'),
+(4, 'PHP et MySql pour les Nuls ', 'Janet VALADE', '2023-11-14', '23R32R2R4', 'Le livre best-seller sur PHP & MySQL !\r\n\r\nAvec cette 5e édition de PHP et MySQL pour les Nuls, vous verrez qu\'il n\'est plus nécessaire d\'être un as de la programmation pour développer des sites Web dynamiques et interactifs.', 'disponible', 'https://cdn.cultura.com/cdn-cgi/image/width=830/media/pim/66_metadata-image-20983256.jpeg');
 
 -- --------------------------------------------------------
 
@@ -73,6 +78,23 @@ INSERT INTO `utilisateurs` (`id`, `nom`, `prenom`, `email`, `mot_de_passe`, `dat
 (1, 'Smith', 'John', 'john@smith.com', '$2b$10$6UQGsRHPMkIjH.1RqeTN/Oo4XRCXwBJEBdOb9lNjddbRIIj3/Olk6', '2023-11-09 21:54:09', 'admin'),
 (2, 'Lord', 'Marc', 'marc@lord.com', '$2b$10$6UQGsRHPMkIjH.1RqeTN/Oo4XRCXwBJEBdOb9lNjddbRIIj3/Olk6', '2023-11-09 21:59:23', 'utilisateur');
 
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `emprunts`
+--
+
+CREATE TABLE `emprunts` (
+  `id` int NOT NULL,
+  `livre_id` int NOT NULL,
+  `utilisateur_id` int NOT NULL,
+  `date_emprunt` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `date_retour_prevue` datetime NOT NULL,
+  `date_retour_effective` datetime DEFAULT NULL,
+  `statut` enum('en_cours','retourne','en_retard') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'en_cours',
+  `rappel_envoye` tinyint(1) DEFAULT '0'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
 --
 -- Index pour les tables déchargées
 --
@@ -87,7 +109,18 @@ ALTER TABLE `livres`
 -- Index pour la table `utilisateurs`
 --
 ALTER TABLE `utilisateurs`
-  ADD PRIMARY KEY (`id`);
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `email` (`email`);
+
+--
+-- Index pour la table `emprunts`
+--
+ALTER TABLE `emprunts`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_utilisateur` (`utilisateur_id`),
+  ADD KEY `idx_livre` (`livre_id`),
+  ADD KEY `idx_statut` (`statut`),
+  ADD KEY `idx_date_retour` (`date_retour_prevue`);
 
 --
 -- AUTO_INCREMENT pour les tables déchargées
@@ -104,6 +137,24 @@ ALTER TABLE `livres`
 --
 ALTER TABLE `utilisateurs`
   MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+
+--
+-- AUTO_INCREMENT pour la table `emprunts`
+--
+ALTER TABLE `emprunts`
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1;
+
+--
+-- Contraintes pour les tables déchargées
+--
+
+--
+-- Contraintes pour la table `emprunts`
+--
+ALTER TABLE `emprunts`
+  ADD CONSTRAINT `fk_emprunts_livre` FOREIGN KEY (`livre_id`) REFERENCES `livres` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_emprunts_utilisateur` FOREIGN KEY (`utilisateur_id`) REFERENCES `utilisateurs` (`id`) ON DELETE CASCADE;
+
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
