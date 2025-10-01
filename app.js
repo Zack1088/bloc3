@@ -3,9 +3,9 @@ const server = require('./server')
 
 const app = express()
 
-app.use(`${baseUrl}/`,server)
+app.use(`/`,server)
 
-app.get(`${baseUrl}/*`, (req, res) => {
+app.get(`/*`, (req, res) => {
   res.sendFile(path.join(__dirname, 'client/build', 'index.html'));
 });
 app.listen(3000, () => {
