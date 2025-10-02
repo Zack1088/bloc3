@@ -4,13 +4,19 @@ const base = import.meta.env.VITE_BASE_URL || '/'
 
 const MesEmprunts = () => {
     const [emprunts, setEmprunts] = useState([])
+    const [filteredEmprunts, setFilteredEmprunts] = useState([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState('')
+    const [filterStatus, setFilterStatus] = useState('tous')
     const navigate = useNavigate()
 
     useEffect(() => {
         fetchEmprunts()
     }, [])
+
+    useEffect(() => {
+        applyFilter()
+    }, [filterStatus, emprunts])
 
     const fetchEmprunts = async () => {
         try {
@@ -21,6 +27,7 @@ const MesEmprunts = () => {
             if (response.ok) {
                 const data = await response.json()
                 setEmprunts(data)
+                setFilteredEmprunts(data)
             } else if (response.status === 401) {
                 setError('Vous devez être connecté pour voir vos emprunts')
                 setTimeout(() => navigate('/login'), 2000)
@@ -32,6 +39,18 @@ const MesEmprunts = () => {
             setError('Erreur réseau')
         } finally {
             setLoading(false)
+        }
+    }
+
+    const applyFilter = () => {
+        if (filterStatus === 'tous') {
+            setFilteredEmprunts(emprunts)
+        } else if (filterStatus === 'en_cours') {
+            setFilteredEmprunts(emprunts.filter(e => e.statut === 'en_cours' || e.statut === 'en_retard'))
+        } else if (filterStatus === 'retournes') {
+            setFilteredEmprunts(emprunts.filter(e => e.statut === 'retourne'))
+        } else if (filterStatus === 'en_retard') {
+            setFilteredEmprunts(emprunts.filter(e => e.statut === 'en_retard' || e.jours_restants < 0))
         }
     }
 
@@ -87,10 +106,21 @@ const MesEmprunts = () => {
     if (loading) return <div className="container"><p>⏳ Chargement...</p></div>
     if (error) return <div className="container"><p style={{ color: 'red' }}>❌ {error}</p></div>
 
+    const getStatistics = () => {
+        return {
+            total: emprunts.length,
+            enCours: emprunts.filter(e => e.statut === 'en_cours').length,
+            enRetard: emprunts.filter(e => e.statut === 'en_retard' || e.jours_restants < 0).length,
+            retournes: emprunts.filter(e => e.statut === 'retourne').length
+        }
+    }
+
+    const stats = getStatistics()
+
     return (
         <div className="container">
             <h2>📚 Mes Emprunts</h2>
-            
+
             {emprunts.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '40px' }}>
                     <p style={{ fontSize: '18px', color: '#666' }}>
@@ -113,15 +143,106 @@ const MesEmprunts = () => {
                 </div>
             ) : (
                 <>
+                    {/* Statistiques */}
+                    <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                        gap: '15px',
+                        marginBottom: '30px'
+                    }}>
+                        <div style={{
+                            backgroundColor: '#fff',
+                            padding: '20px',
+                            borderRadius: '8px',
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                            border: '2px solid #2196F3'
+                        }}>
+                            <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#2196F3' }}>{stats.total}</div>
+                            <div style={{ color: '#666', marginTop: '5px' }}>📚 Total emprunts</div>
+                        </div>
+
+                        <div style={{
+                            backgroundColor: '#fff',
+                            padding: '20px',
+                            borderRadius: '8px',
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                            border: '2px solid #4CAF50'
+                        }}>
+                            <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#4CAF50' }}>{stats.enCours}</div>
+                            <div style={{ color: '#666', marginTop: '5px' }}>📖 En cours</div>
+                        </div>
+
+                        <div style={{
+                            backgroundColor: '#fff',
+                            padding: '20px',
+                            borderRadius: '8px',
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                            border: '2px solid #f44336'
+                        }}>
+                            <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#f44336' }}>{stats.enRetard}</div>
+                            <div style={{ color: '#666', marginTop: '5px' }}>⚠ En retard</div>
+                        </div>
+
+                        <div style={{
+                            backgroundColor: '#fff',
+                            padding: '20px',
+                            borderRadius: '8px',
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                            border: '2px solid #757575'
+                        }}>
+                            <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#757575' }}>{stats.retournes}</div>
+                            <div style={{ color: '#666', marginTop: '5px' }}>✓ Retournés</div>
+                        </div>
+                    </div>
+
+                    {/* Filtres */}
+                    <div style={{ marginBottom: '20px' }}>
+                        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                            {[
+                                { key: 'tous', label: '📋 Tous', count: stats.total },
+                                { key: 'en_cours', label: '📖 En cours', count: stats.enCours },
+                                { key: 'en_retard', label: '⚠ En retard', count: stats.enRetard },
+                                { key: 'retournes', label: '✓ Retournés', count: stats.retournes }
+                            ].map(filter => (
+                                <button
+                                    key={filter.key}
+                                    onClick={() => setFilterStatus(filter.key)}
+                                    style={{
+                                        backgroundColor: filterStatus === filter.key ? '#2196F3' : '#fff',
+                                        color: filterStatus === filter.key ? 'white' : '#333',
+                                        padding: '10px 20px',
+                                        border: '2px solid #2196F3',
+                                        borderRadius: '20px',
+                                        cursor: 'pointer',
+                                        fontSize: '14px',
+                                        fontWeight: filterStatus === filter.key ? 'bold' : 'normal',
+                                        transition: 'all 0.3s',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '5px'
+                                    }}
+                                >
+                                    {filter.label} <span style={{
+                                        backgroundColor: filterStatus === filter.key ? 'rgba(255,255,255,0.3)' : '#2196F3',
+                                        color: filterStatus === filter.key ? 'white' : 'white',
+                                        padding: '2px 8px',
+                                        borderRadius: '10px',
+                                        fontSize: '12px',
+                                        fontWeight: 'bold'
+                                    }}>
+                                        {filter.count}
+                                    </span>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
                     <p style={{ color: '#666', marginBottom: '20px' }}>
-                        📊 Total : {emprunts.length} emprunt(s) 
-                        {emprunts.filter(e => e.statut === 'en_cours' || e.statut === 'en_retard').length > 0 && 
-                            ` • ${emprunts.filter(e => e.statut === 'en_cours' || e.statut === 'en_retard').length} en cours`
-                        }
+                        Affichage de <strong>{filteredEmprunts.length}</strong> emprunt(s)
                     </p>
-                    
+
                     <div className="emprunts-list">
-                        {emprunts.map(emprunt => (
+                        {filteredEmprunts.map(emprunt => (
                             <div key={emprunt.id} style={{
                                 border: '2px solid #ddd',
                                 padding: '20px',

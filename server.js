@@ -8,9 +8,16 @@ const path = require('path')
 const cookieParser = require('cookie-parser')
 const jwt = require('jsonwebtoken')
 const db = require('./services/database')
-const fs = require('fs') // ✅ Ajouter
+const fs = require('fs')
+require('dotenv').config()
 
-const JWT_SECRET = "HelloThereImObiWan"
+// Validation du JWT_SECRET
+if (!process.env.JWT_SECRET) {
+    console.error('⚠️  ERREUR: JWT_SECRET manquant dans .env')
+    process.exit(1)
+}
+
+const JWT_SECRET = process.env.JWT_SECRET
 
 function authenticateToken(req, res, next) {
     const token = req.cookies.token
@@ -24,7 +31,7 @@ function authenticateToken(req, res, next) {
 }
 
 const corsOptions = {
-    origin: 'http://localhost:5173',
+    origin: process.env.CLIENT_URL || 'http://localhost:5173',
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
     optionsSuccessStatus: 204

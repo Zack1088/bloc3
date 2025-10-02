@@ -248,3 +248,195 @@ p {
     display: block;
     margin: 0 auto; 
 }
+/* ==========================================
+   STYLES POUR LE SYSTÈME D'EMPRUNTS
+   ========================================== */
+
+/* Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+}
+
+/* Cartes d'emprunts */
+.emprunt-card {
+    animation: fadeIn 0.3s ease-in-out;
+    transition: all 0.3s ease;
+}
+
+.emprunt-card:hover {
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Badges de statut */
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-weight: bold;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 13px;
+    transition: transform 0.2s;
+}
+
+.status-badge:hover {
+    transform: scale(1.05);
+}
+
+.status-disponible {
+    background-color: #4CAF5020;
+    color: #4CAF50;
+    border: 2px solid #4CAF50;
+}
+
+.status-emprunte {
+    background-color: #f4433620;
+    color: #f44336;
+    border: 2px solid #f44336;
+}
+
+.status-retard {
+    background-color: #f4433630;
+    color: #f44336;
+    border: 2px solid #f44336;
+    animation: pulse 2s infinite;
+}
+
+.status-bientot {
+    background-color: #FF980030;
+    color: #FF9800;
+    border: 2px solid #FF9800;
+}
+
+/* Boutons */
+button {
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+button:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Filtres */
+.filter-button {
+    transition: all 0.3s ease;
+}
+
+.filter-button:hover {
+    transform: scale(1.05);
+}
+
+.filter-button.active {
+    box-shadow: 0 4px 12px rgba(33, 150, 243, 0.4);
+}
+
+/* Statistiques */
+.stat-card {
+    transition: transform 0.3s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Bannière de notification */
+.notification-banner {
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .container {
+        max-width: 100%;
+        padding: 10px;
+    }
+
+    .emprunt-card {
+        padding: 15px !important;
+    }
+
+    .stat-card {
+        margin-bottom: 10px;
+    }
+
+    button {
+        width: 100%;
+        margin-bottom: 10px;
+    }
+}
+
+/* Loading spinner */
+.loading-spinner {
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #2196F3;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+    margin: 20px auto;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Smooth scrolling */
+html {
+    scroll-behavior: smooth;
+}
+
+/* Tooltip styles */
+[title] {
+    position: relative;
+    cursor: help;
+}
+
+/* Success message */
+.success-message {
+    background-color: #4CAF50;
+    color: white;
+    padding: 15px;
+    border-radius: 8px;
+    margin: 10px 0;
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+/* Error message */
+.error-message {
+    background-color: #f44336;
+    color: white;
+    padding: 15px;
+    border-radius: 8px;
+    margin: 10px 0;
+    animation: fadeIn 0.5s ease-in-out;
+}
+

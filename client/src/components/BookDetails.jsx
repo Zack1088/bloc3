@@ -9,10 +9,13 @@ const BookDetails = () => {
     const [userRole, setUserRole] = useState('')
     const [isAuthenticated, setIsAuthenticated] = useState(false)
     const [loading, setLoading] = useState(true)
+    const [borrowing, setBorrowing] = useState(false)
+    const [userHasActiveLoan, setUserHasActiveLoan] = useState(false)
 
     useEffect(() => {
         fetchBook()
         checkAuth()
+        checkUserLoans()
     }, [bookId]);
 
     const fetchBook = () => {
@@ -50,12 +53,32 @@ const BookDetails = () => {
             });
     }
 
+    const checkUserLoans = async () => {
+        try {
+            const response = await fetch(`${base}api/emprunts/mes-emprunts`, {
+                credentials: 'include'
+            })
+            if (response.ok) {
+                const emprunts = await response.json()
+                const hasActiveLoan = emprunts.some(e =>
+                    e.livre_id === parseInt(bookId) &&
+                    (e.statut === 'en_cours' || e.statut === 'en_retard')
+                )
+                setUserHasActiveLoan(hasActiveLoan)
+            }
+        } catch (error) {
+            console.error('Erreur vérification emprunts:', error)
+        }
+    }
+
     const handleEmprunter = async () => {
         if (!isAuthenticated) {
             alert('⚠️ Vous devez être connecté pour emprunter un livre')
             navigate('/login')
             return
         }
+
+        setBorrowing(true)
 
         try {
             const response = await fetch(`${base}api/emprunts/emprunter/${bookId}`, {
@@ -70,14 +93,17 @@ const BookDetails = () => {
                     day: 'numeric',
                     month: 'long',
                     year: 'numeric'
-                })}\n⏰ Durée: ${data.dureeJours} jours`)
+                })}\n⏰ Durée: ${data.dureeJours} jours\n\n💡 Vous recevrez un email de rappel automatique en cas de retard.`)
                 fetchBook()
+                checkUserLoans()
             } else {
                 alert('❌ ' + (data.message || 'Erreur lors de l\'emprunt'))
             }
         } catch (error) {
             console.error('Erreur:', error)
             alert('❌ Erreur réseau')
+        } finally {
+            setBorrowing(false)
         }
     }
 
@@ -192,7 +218,7 @@ const BookDetails = () => {
                 gap: '10px',
                 flexWrap: 'wrap'
             }}>
-                <button 
+                <button
                     onClick={handleBack}
                     style={{
                         backgroundColor: '#757575',
@@ -206,12 +232,12 @@ const BookDetails = () => {
                 >
                     ← Retour à la liste
                 </button>
-                
-                {isAuthenticated && book.statut === 'disponible' && (
-                    <button 
-                        onClick={handleEmprunter}
+
+                {userHasActiveLoan && (
+                    <button
+                        onClick={() => navigate('/mes-emprunts')}
                         style={{
-                            backgroundColor: '#2196F3',
+                            backgroundColor: '#FF9800',
                             color: 'white',
                             padding: '12px 24px',
                             border: 'none',
@@ -221,7 +247,44 @@ const BookDetails = () => {
                             fontWeight: 'bold'
                         }}
                     >
-                        📚 Emprunter ce livre (30 jours)
+                        📖 Vous avez déjà emprunté ce livre
+                    </button>
+                )}
+
+                {isAuthenticated && book.statut === 'disponible' && !userHasActiveLoan && (
+                    <button
+                        onClick={handleEmprunter}
+                        disabled={borrowing}
+                        style={{
+                            backgroundColor: borrowing ? '#ccc' : '#2196F3',
+                            color: 'white',
+                            padding: '12px 24px',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: borrowing ? 'not-allowed' : 'pointer',
+                            fontSize: '14px',
+                            fontWeight: 'bold'
+                        }}
+                    >
+                        {borrowing ? '⏳ Emprunt en cours...' : '📚 Emprunter ce livre (30 jours)'}
+                    </button>
+                )}
+
+                {!isAuthenticated && book.statut === 'disponible' && (
+                    <button
+                        onClick={() => navigate('/login')}
+                        style={{
+                            backgroundColor: '#4CAF50',
+                            color: 'white',
+                            padding: '12px 24px',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '14px',
+                            fontWeight: 'bold'
+                        }}
+                    >
+                        🔒 Connectez-vous pour emprunter
                     </button>
                 )}
                 

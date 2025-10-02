@@ -3,8 +3,9 @@ const router = express.Router()
 const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken')
 const db = require('./../services/database')
+require('dotenv').config()
 
-const JWT_SECRET = "HelloThereImObiWan"
+const JWT_SECRET = process.env.JWT_SECRET
 
 function authenticateToken(req, res, next) {
     const token = req.cookies.token
@@ -45,11 +46,6 @@ router
         }
         else res.send('Utilisateur enregistré')
     })
-})
-.get('/pass/:pass', async (req, res)=> {
-    //For Test Only
-    const hashedPassword = await bcrypt.hash(req.params.pass, 10)
-    res.send(hashedPassword)
 })
 
 .put('/:id', authenticateToken, (req, res) => {

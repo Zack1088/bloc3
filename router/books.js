@@ -16,7 +16,7 @@ router
     const { title, author, date_publication, isbn, description, status, cover } = req.body
     const sql = 'INSERT INTO livres (titre, auteur, date_publication, isbn, description, statut, photo_url) VALUES (?, ?, ?, ?, ?, ?, ?)'
     db.query(sql, [title, author, date_publication, isbn, description, status || "disponible", cover], (err) => {
-        if (err) res.staus(400).send("Erreur d'envoi")
+        if (err) return res.status(400).send("Erreur d'envoi")
         res.send('Livre ajouté')
     })
 })

@@ -11,17 +11,31 @@ npm -v
 ```
 
 
-2. installer les dépendances
+2. Installer les dépendances
 ```shell
 npm i
 ```
-```shell 
+```shell
 cd client
 npm i
 cd  ..
 ```
 
-2. Importer le script SQL dans votre base de donnée
+3. **IMPORTANT : Configurer les variables d'environnement**
+```shell
+# Copier le fichier exemple
+cp exemple.env .env
+
+# Éditer .env et configurer :
+# - EMAIL_USER : Votre email Gmail
+# - EMAIL_PASS : Mot de passe d'application Gmail (voir docs/CONFIGURATION_EMAILS.md)
+# - DB_PASSWORD : Mot de passe de votre base MySQL
+# - JWT_SECRET : Générer avec : node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
+
+📖 **Guide complet :** Voir `docs/CONFIGURATION_EMAILS.md` pour la configuration Gmail
+
+4. Importer le script SQL dans votre base de donnée
 ```shell
     mysql -u [username] -p [database_name] < ./config/library.sql
 ```
@@ -39,16 +53,30 @@ Par exemple pour un utilisateur root sans mot de passe avec une base de donnée 
 
 **En cas de problème baseURL : indiquez une variable baseURL avec comme valeure : ""** 
 
-1. Exécuter le serveur et le client dans 2 terminaux différents
+1. **TESTER la configuration email (optionnel mais recommandé)**
 ```shell
-node app.js
+node test-email.js
+```
+✅ Attendu : "✅ Connexion SMTP réussie !"
+
+2. Exécuter le serveur et le client dans 2 terminaux différents
+```shell
+npm run dev
 ```
 ```shell
 cd client
 npm run dev
 ```
 
-2. Accéder à l'Application
+**Logs attendus au démarrage :**
+```
+✅ Serveur démarré sur le port 3000
+🌍 Environnement: development
+✅ Database Connected! (library)
+✅ Tâche CRON démarrée : Rappels quotidiens à 9h00
+```
+
+3. Accéder à l'Application
 Ouvrez votre navigateur et allez sur la page http://localhost:5174 et http://localhost:3000 pour l'api.
 
 Attention les appels API ne sont pas diriger vers le 3000, il faut donc les modifiers

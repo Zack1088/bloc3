@@ -1,34 +1,24 @@
 const nodemailer = require('nodemailer')
+require('dotenv').config()
 
-// Configuration du transporteur email
+// Validation des variables d'environnement
+if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+    console.error('⚠️  ERREUR: Variables EMAIL_USER et EMAIL_PASS manquantes dans .env')
+}
+
+// Configuration sécurisée du transporteur email
 const transporter = nodemailer.createTransport({
-    // Option A : Gmail (nécessite un mot de passe d'application)
-    service: 'gmail',
-    auth: {
-        user: process.env.EMAIL_USER || 'votre-email@gmail.com',
-        pass: process.env.EMAIL_PASS || 'votre-mot-de-passe-application'
-    }
-    
-    // Option B : SMTP générique
-    /*
-    host: 'smtp.example.com',
-    port: 587,
-    secure: false,
+    host: process.env.EMAIL_HOST || 'smtp.gmail.com',
+    port: parseInt(process.env.EMAIL_PORT) || 465,
+    secure: process.env.EMAIL_SECURE === 'true', // true pour port 465, false pour autres ports
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
+    },
+    tls: {
+        // Ne pas échouer sur des certificats invalides en dev
+        rejectUnauthorized: process.env.NODE_ENV === 'production'
     }
-    */
-    
-    // Option C : Mailtrap (pour les tests)
-    /*
-    host: 'smtp.mailtrap.io',
-    port: 2525,
-    auth: {
-        user: process.env.MAILTRAP_USER,
-        pass: process.env.MAILTRAP_PASS
-    }
-    */
 })
 
 // Fonction pour envoyer un email de rappel
@@ -78,7 +68,7 @@ async function envoyerRappelRetard(utilisateur, livre, emprunt) {
                         
                         <p>Vous pouvez signaler le retour directement depuis votre espace personnel :</p>
                         
-                        <a href="http://localhost:5173/mes-emprunts" class="button">
+                        <a href="${process.env.CLIENT_URL || 'http://localhost:5173'}/mes-emprunts" class="button">
                             📖 Voir mes emprunts
                         </a>
                     </div>

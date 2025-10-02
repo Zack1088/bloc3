@@ -2,8 +2,9 @@ const express = require('express')
 const router = express.Router()
 const db = require('./../services/database')
 const jwt = require('jsonwebtoken')
+require('dotenv').config()
 
-const JWT_SECRET = "HelloThereImObiWan"
+const JWT_SECRET = process.env.JWT_SECRET
 
 // ✅ Middleware d'authentification
 function authenticateToken(req, res, next) {
