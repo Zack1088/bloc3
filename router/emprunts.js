@@ -341,10 +341,10 @@ router.get('/statistiques', authenticateToken, (req, res) => {
 //  Route pour déclencher manuellement les rappels (Admin uniquement)
 router.post('/envoyer-rappels', authenticateToken, isAdmin, async (req, res) => {
     const { executerRappelsImmediatement } = require('./../services/rappelsCron')
-    
+
     try {
         executerRappelsImmediatement()
-        res.json({ 
+        res.json({
             message: 'Envoi des rappels en cours. Consultez les logs du serveur.',
             timestamp: new Date().toISOString()
         })
@@ -353,4 +353,187 @@ router.post('/envoyer-rappels', authenticateToken, isAdmin, async (req, res) => 
         res.status(500).json({ message: 'Erreur lors de l\'envoi des rappels' })
     }
 })
+
+// ========================================
+// 8️⃣ HISTORIQUE COMPLET DES EMPRUNTS (Admin)
+// ========================================
+router.get('/all', authenticateToken, isAdmin, (req, res) => {
+    const query = `
+        SELECT
+            e.id,
+            e.date_emprunt,
+            e.date_retour_prevue,
+            e.date_retour_effective,
+            e.statut,
+            e.rappel_envoye,
+            COALESCE(e.rappels_envoyes, 0) as rappels_envoyes,
+            l.id as livre_id,
+            l.titre as livre_titre,
+            l.auteur as livre_auteur,
+            u.id as utilisateur_id,
+            u.nom as utilisateur_nom,
+            u.prenom as utilisateur_prenom,
+            u.email as utilisateur_email,
+            DATEDIFF(e.date_retour_prevue, NOW()) as jours_restants,
+            DATEDIFF(NOW(), e.date_retour_prevue) as jours_retard
+        FROM emprunts e
+        JOIN livres l ON e.livre_id = l.id
+        JOIN utilisateurs u ON e.utilisateur_id = u.id
+        ORDER BY
+            CASE
+                WHEN e.statut = 'en_retard' THEN 1
+                WHEN e.statut = 'en_cours' THEN 2
+                ELSE 3
+            END,
+            e.date_emprunt DESC
+    `
+
+    db.query(query, (err, results) => {
+        if (err) {
+            console.error(err)
+            return res.status(500).json({ message: 'Erreur serveur' })
+        }
+
+        // Auto-update status for overdue loans
+        results.forEach(emprunt => {
+            if (emprunt.statut === 'en_cours' && emprunt.jours_restants < 0) {
+                db.query(
+                    'UPDATE emprunts SET statut = "en_retard" WHERE id = ?',
+                    [emprunt.id]
+                )
+                emprunt.statut = 'en_retard'
+            }
+        })
+
+        res.json(results)
+    })
+})
+
+// ========================================
+// 9️⃣ ENVOYER UN RAPPEL MANUEL (Admin)
+// ========================================
+router.post('/:borrowId/rappel', authenticateToken, isAdmin, async (req, res) => {
+    const empruntId = req.params.borrowId
+
+    // Get borrow details
+    const getEmpruntQuery = `
+        SELECT
+            e.*,
+            u.email,
+            u.nom,
+            u.prenom,
+            l.titre as livre_titre,
+            l.auteur as livre_auteur,
+            DATEDIFF(NOW(), e.date_retour_prevue) as jours_retard
+        FROM emprunts e
+        JOIN utilisateurs u ON e.utilisateur_id = u.id
+        JOIN livres l ON e.livre_id = l.id
+        WHERE e.id = ?
+    `
+
+    db.query(getEmpruntQuery, [empruntId], async (err, results) => {
+        if (err) {
+            console.error(err)
+            return res.status(500).json({ message: 'Erreur serveur' })
+        }
+
+        if (results.length === 0) {
+            return res.status(404).json({ message: 'Emprunt non trouvé' })
+        }
+
+        const emprunt = results[0]
+
+        // Only send reminder for overdue loans
+        if (emprunt.statut !== 'en_retard' && emprunt.jours_retard <= 0) {
+            return res.status(400).json({
+                message: 'Les rappels ne peuvent être envoyés que pour les emprunts en retard'
+            })
+        }
+
+        // Send reminder email
+        try {
+            const { envoyerEmail } = require('./../services/mailer')
+
+            const dateEmprunt = new Date(emprunt.date_emprunt).toLocaleDateString('fr-FR')
+            const dateRetourPrevue = new Date(emprunt.date_retour_prevue).toLocaleDateString('fr-FR')
+
+            const htmlContent = `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
+                    <h2 style="color: #f44336; text-align: center;">⚠️ Rappel: Livre en Retard</h2>
+
+                    <p>Bonjour <strong>${emprunt.prenom} ${emprunt.nom}</strong>,</p>
+
+                    <p>Ce message est un <strong>rappel manuel</strong> concernant votre emprunt en retard à la bibliothèque.</p>
+
+                    <div style="background-color: #fff3cd; border-left: 4px solid #ff9800; padding: 15px; margin: 20px 0;">
+                        <h3 style="margin-top: 0; color: #ff9800;">📚 Détails de l'emprunt :</h3>
+                        <ul style="list-style: none; padding: 0;">
+                            <li>📖 <strong>Livre :</strong> ${emprunt.livre_titre}</li>
+                            <li>✍️ <strong>Auteur :</strong> ${emprunt.livre_auteur}</li>
+                            <li>📅 <strong>Date d'emprunt :</strong> ${dateEmprunt}</li>
+                            <li>⏰ <strong>Date de retour prévue :</strong> ${dateRetourPrevue}</li>
+                            <li>🔴 <strong>Jours de retard :</strong> ${emprunt.jours_retard} jour(s)</li>
+                        </ul>
+                    </div>
+
+                    <p style="color: #d32f2f; font-weight: bold;">
+                        ⚠️ Merci de retourner ce livre dès que possible !
+                    </p>
+
+                    <p>Connectez-vous à votre espace pour gérer vos emprunts :</p>
+
+                    <div style="text-align: center; margin: 30px 0;">
+                        <a href="${process.env.CLIENT_URL || 'http://localhost:5173'}/mes-emprunts"
+                           style="background-color: #007BFF; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block;">
+                            📋 Voir mes emprunts
+                        </a>
+                    </div>
+
+                    <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;">
+
+                    <p style="font-size: 12px; color: #999; text-align: center;">
+                        Bibliothèque - Système de Gestion des Emprunts<br>
+                        Ceci est un email automatique, merci de ne pas y répondre.
+                    </p>
+                </div>
+            `
+
+            await envoyerEmail(
+                emprunt.email,
+                `⚠️ Rappel: Livre en retard - ${emprunt.livre_titre}`,
+                htmlContent
+            )
+
+            // Increment reminder count
+            const currentCount = emprunt.rappels_envoyes || 0
+            const updateQuery = `
+                UPDATE emprunts
+                SET rappels_envoyes = ?,
+                    derniere_date_rappel = NOW(),
+                    rappel_envoye = TRUE
+                WHERE id = ?
+            `
+
+            db.query(updateQuery, [currentCount + 1, empruntId], (updateErr) => {
+                if (updateErr) {
+                    console.error('Erreur mise à jour compteur:', updateErr)
+                }
+
+                res.json({
+                    message: 'Rappel envoyé avec succès',
+                    email: emprunt.email,
+                    rappelsEnvoyes: currentCount + 1
+                })
+            })
+
+        } catch (emailError) {
+            console.error('Erreur envoi email:', emailError)
+            res.status(500).json({
+                message: 'Erreur lors de l\'envoi de l\'email de rappel',
+                error: emailError.message
+            })
+        }
+    })
+})
+
 module.exports = router

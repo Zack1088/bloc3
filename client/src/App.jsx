@@ -9,6 +9,7 @@ import Register from './components/Register.jsx'
 import Login from './components/Login.jsx'
 import DashBoard from './components/DashBoard.jsx'
 import MesEmprunts from './components/MesEmprunts.jsx'
+import BorrowHistory from './components/admin/BorrowHistory.jsx'
 import './style.css'
 const base = import.meta.env.VITE_BASE_URL || '/'
 
@@ -26,6 +27,7 @@ function App() {
                 <Route path="/book/:bookId" element={<Template userT={userT} page="Détail du livre"><BookDetails /></Template>} />
                 <Route path="/edit_book/:bookId" element={<Template userT={userT} page="Édition du livre"><EditBook /></Template>} />
                 <Route path="/mes-emprunts" element={<Template userT={userT} page="Mes Emprunts"><MesEmprunts /></Template>} />
+                <Route path="/borrow-history" element={<Template userT={userT} page="Historique des Emprunts"><BorrowHistory /></Template>} />
             </Routes>
         </Router>
     );

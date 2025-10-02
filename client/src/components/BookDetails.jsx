@@ -1,16 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import Modal from './ui/Modal';
+import { useToast } from '../contexts/ToastContext';
 const base = import.meta.env.VITE_BASE_URL || '/'
 
 const BookDetails = () => {
     const { bookId } = useParams()
     const navigate = useNavigate()
+    const { showSuccess, showError } = useToast()
     const [book, setBook] = useState(null)
     const [userRole, setUserRole] = useState('')
     const [isAuthenticated, setIsAuthenticated] = useState(false)
     const [loading, setLoading] = useState(true)
     const [borrowing, setBorrowing] = useState(false)
     const [userHasActiveLoan, setUserHasActiveLoan] = useState(false)
+    const [showDeleteModal, setShowDeleteModal] = useState(false)
+    const [isDeleting, setIsDeleting] = useState(false)
 
     useEffect(() => {
         fetchBook()
@@ -116,20 +121,30 @@ const BookDetails = () => {
     };
 
     const handleDelete = () => {
-        if (confirm('⚠️ Êtes-vous sûr de vouloir supprimer ce livre ?')) {
-            fetch(`${base}api/books/${bookId}`, {
+        setShowDeleteModal(true)
+    };
+
+    const confirmDelete = async () => {
+        setIsDeleting(true)
+        try {
+            const response = await fetch(`${base}api/books/${bookId}`, {
                 method: 'DELETE',
                 credentials: 'include'
             })
-                .then(response => {
-                    if (response.ok) {
-                        alert('✅ Livre supprimé')
-                        navigate('/books')
-                    } else {
-                        alert('❌ Erreur lors de la suppression')
-                    }
-                })
-                .catch(error => console.error('Erreur:', error))
+
+            if (response.ok) {
+                showSuccess('✓ Livre supprimé avec succès')
+                setTimeout(() => navigate('/books'), 1000)
+            } else {
+                showError('Erreur lors de la suppression')
+                setShowDeleteModal(false)
+            }
+        } catch (error) {
+            console.error('Erreur:', error)
+            showError('Erreur réseau')
+            setShowDeleteModal(false)
+        } finally {
+            setIsDeleting(false)
         }
     };
 
@@ -321,6 +336,72 @@ const BookDetails = () => {
                     </>
                 )}
             </div>
+
+            {/* Modal de confirmation de suppression */}
+            <Modal
+                isOpen={showDeleteModal}
+                onClose={() => !isDeleting && setShowDeleteModal(false)}
+                title="Confirmer la suppression"
+                size="small"
+            >
+                <div style={{ padding: '20px 0' }}>
+                    <p style={{ fontSize: '16px', marginBottom: '20px', color: '#333' }}>
+                        ⚠️ Êtes-vous sûr de vouloir supprimer le livre <strong>"{book?.titre}"</strong> ?
+                    </p>
+                    <p style={{ fontSize: '14px', color: '#666', marginBottom: '30px' }}>
+                        Cette action est irréversible.
+                    </p>
+
+                    <div style={{
+                        display: 'flex',
+                        gap: '12px',
+                        justifyContent: 'flex-end'
+                    }}>
+                        <button
+                            onClick={() => setShowDeleteModal(false)}
+                            disabled={isDeleting}
+                            style={{
+                                padding: '10px 20px',
+                                backgroundColor: '#fff',
+                                color: '#333',
+                                border: '1px solid #ddd',
+                                borderRadius: '6px',
+                                cursor: isDeleting ? 'not-allowed' : 'pointer',
+                                fontSize: '14px',
+                                fontWeight: '500'
+                            }}
+                        >
+                            Annuler
+                        </button>
+                        <button
+                            onClick={confirmDelete}
+                            disabled={isDeleting}
+                            style={{
+                                padding: '10px 20px',
+                                backgroundColor: isDeleting ? '#ccc' : '#f44336',
+                                color: '#fff',
+                                border: 'none',
+                                borderRadius: '6px',
+                                cursor: isDeleting ? 'not-allowed' : 'pointer',
+                                fontSize: '14px',
+                                fontWeight: '500',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px'
+                            }}
+                        >
+                            {isDeleting ? (
+                                <>
+                                    <span className="loading-spinner-small"></span>
+                                    Suppression...
+                                </>
+                            ) : (
+                                '🗑️ Supprimer'
+                            )}
+                        </button>
+                    </div>
+                </div>
+            </Modal>
         </div>
     );
 };

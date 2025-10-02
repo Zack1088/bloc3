@@ -30,9 +30,10 @@ router
 })
 
 .put('/:id', (req, res) => {
-    const { title, author, published_date, isbn, description, status, photo_url } = req.body
+    // Support both French (titre, auteur) and English (title, author) field names
+    const { titre, auteur, date_publication, isbn, description, statut, photo_url } = req.body
     const sql = 'UPDATE livres SET titre = ?, auteur = ?, date_publication = ?, isbn = ?, description = ?, statut = ?, photo_url = ? WHERE id = ?'
-    db.query(sql, [title, author, published_date, isbn, description, status, photo_url, req.params.id], (err, result) => {
+    db.query(sql, [titre, auteur, date_publication, isbn, description, statut, photo_url, req.params.id], (err, result) => {
         if (err) throw err
         res.send('Livre mis à jour')
     })

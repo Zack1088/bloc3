@@ -490,7 +490,6 @@ Affichage bannière si emprunts trouvés
 **Date de livraison :** 2025-10-02
 **Version :** 1.0.0
 **Status :** ✅ PRODUCTION READY
-**Développeur :** Claude (Anthropic)
 
 ---
 

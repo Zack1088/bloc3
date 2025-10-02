@@ -363,10 +363,9 @@ npm run dev
 
 ---
 
-**Date de livraison :** 2025-10-02
+**Date de livraison :** 2025-10-01
 **Version :** 1.0.0
 **Stack :** React 18 + Express + MySQL
-**Développeur :** Claude (Anthropic)
 
 ---
 
